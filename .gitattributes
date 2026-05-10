@@ -1,0 +1,1 @@
+echo "*.html linguist-detectable=false" >> .gitattributes
