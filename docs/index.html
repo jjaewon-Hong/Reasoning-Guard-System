@@ -378,8 +378,32 @@ async function runSimulation(){
   scanLine.classList.add('active');
 
   try{
-    const res=await fetch('/api/simulate');
-    const d=await res.json();
+    let d;
+    let isMock = false;
+    try {
+      const res=await fetch('/api/simulate');
+      if (!res.ok) throw new Error("API not available");
+      d=await res.json();
+    } catch(err) {
+      isMock = true;
+      const mockImages = ['1.png','2.png','3.png','4.png','5.png','6.png','7.png','8.png','9.png','10.png','11.png','12.png'];
+      const target = mockImages[Math.floor(Math.random() * mockImages.length)];
+      const classes = ['FIGHTER', 'DRONE', 'MISSILE'];
+      const pred = classes[Math.floor(Math.random() * 3)];
+      
+      let f=Math.random()*10, dr=Math.random()*10, m=Math.random()*10, e=Math.random()*60;
+      if (pred === 'FIGHTER') f = 70 + Math.random()*29;
+      if (pred === 'DRONE') dr = 70 + Math.random()*29;
+      if (pred === 'MISSILE') m = 70 + Math.random()*29;
+      
+      let status = "SAFE";
+      const maxConf = Math.max(f, dr, m);
+      if (maxConf >= 90 && e <= 50) status = "DANGER";
+      else if (maxConf >= 40) status = "CAUTION";
+      
+      d = { target, predicted: pred, status, probs: { fighter: f, drone: dr, missile: m, etc: e } };
+      addLog('[MOCK] OFFLINE MODE: GENERATING DATA');
+    }
 
     // 이미지 로드
     const img=document.getElementById('target-img');
@@ -387,7 +411,8 @@ async function runSimulation(){
     img.style.display='none';
     await new Promise(resolve=>{
       img.onload=resolve;
-      img.src='/api/image/'+d.target+'?t='+Date.now();
+      img.onerror=resolve;
+      img.src= isMock ? './test_pool/'+d.target+'?t='+Date.now() : '/api/image/'+d.target+'?t='+Date.now();
     });
     img.style.display='block';
     placeholder.style.display='none';
@@ -417,13 +442,11 @@ async function runSimulation(){
     etcFill.style.width = Math.min(etcVal, 100) + '%';
     etcValEl.textContent = etcVal.toFixed(1) + '%';
     if (etcVal > 50) {
-      // ETC > 50% → 자동 발사 억제
       etcFill.style.background = '#cc2222';
       etcValEl.style.color = '#cc2222';
       etcMsg.textContent = '⚠ FIRE SUPPRESSED — NOISE EXCEEDS 50%';
       etcMsg.style.color = '#cc4444';
     } else {
-      // ETC ≤ 50% → 발사 조건 충족 가능
       etcFill.style.background = '#22aa22';
       etcValEl.style.color = '#22aa22';
       etcMsg.textContent = '✓ NOISE NOMINAL — FIRE CONDITION MET';

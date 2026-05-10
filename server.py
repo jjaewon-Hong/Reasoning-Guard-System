@@ -10,7 +10,7 @@ MODEL_PATH = "reasoning_guard_engine.onnx"
 IMG_DIR    = "./test_pool"
 CLASS_NAMES = ["FIGHTER", "DRONE", "MISSILE", "ETC"]
 
-app = Flask(__name__, static_folder="web", static_url_path="")
+app = Flask(__name__, static_folder="docs", static_url_path="")
 
 # ── 모델 로드 ────────────────────────────────────────────────
 print("[RG] ONNX 모델 로드 중...")
@@ -47,7 +47,7 @@ def evaluate(probs):
 # ── 라우트 ──────────────────────────────────────────────────
 @app.route("/")
 def index():
-    return send_from_directory("web", "index.html")
+    return send_from_directory("docs", "index.html")
 
 @app.route("/api/simulate")
 def simulate():
