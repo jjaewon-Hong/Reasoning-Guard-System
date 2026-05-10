@@ -9,7 +9,7 @@
 * **Course:** OSS설계 
 
 ## 🛡️ Project Overview
-Reasoning Guard는 PyTorch 기반의 고도화된 딥러닝 학습 파이프라인과 C++ 기반의 고속 전술 인터페이스를 결합한 지능형 방공 시스템으로, 모델 가중치를 ONNX 포맷으로 변환하여 전술적 실시간성과 시스템 이식성을 극대화한 것이 핵심입니다. 브라우저 단에서 직접 추론과 시각적 HUD를 구현하는 독립 실행형 웹 시뮬레이션 환경을 제공하며, 이를 통해 미식별 객체의 정밀 식별부터 3단계 전술 대응(SAFE, CAUTION, DANGER)에 이르는 의사결정 프로세스를 고신뢰성 엔진으로 자동화합니다.
+Reasoning Guard는 PyTorch 기반 AI를 ONNX로 최적화하여 C++ 전술 엔진에 통합한 고신뢰성 지능형 방공 솔루션입니다. 3단계 전술 로직으로 의사결정을 자동화하며, 연구용 Public Dataset을 활용하여 보안 무결성을 견지함과 동시에 전술 데이터의 집약적 관리와 확장성을 극대화한 실전형 사격 통제 아키텍처를 지향합니다.
 
 ## 🛠️ Technology Stack
 * **AI & Inference:** PyTorch, ONNX, ONNX Runtime (C++ / Web)
