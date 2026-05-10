@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REASONING GUARD — Tactical Operational System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#080808;color:#e0e0e0;font-family:'Share Tech Mono',monospace;min-height:100vh;overflow:hidden;}
+
+  /* ── 메인 레이아웃 ── */
+  .hud{display:grid;grid-template-rows:auto 1fr auto;height:100vh;padding:10px;gap:8px;}
+  .header{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;border-bottom:1px solid #222;}
+  .header-title{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:4px;color:#888;}
+  .header-time{font-size:11px;color:#555;}
+  .content{display:grid;grid-template-columns:1fr 320px;gap:10px;min-height:0;}
+  .footer{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:6px 0;}
+
+  /* ── 이미지 패널 ── */
+  .img-panel{position:relative;background:#0d0d0d;border:1px solid #1e1e1e;display:flex;flex-direction:column;}
+  .corner{position:absolute;width:18px;height:18px;z-index:10;}
+  .corner.tl{top:6px;left:6px;border-top:2px solid;border-left:2px solid;}
+  .corner.tr{top:6px;right:6px;border-top:2px solid;border-right:2px solid;}
+  .corner.bl{bottom:6px;left:6px;border-bottom:2px solid;border-left:2px solid;}
+  .corner.br{bottom:6px;right:6px;border-bottom:2px solid;border-right:2px solid;}
+  .corner-danger{border-color:#cc2222;}
+  .corner-caution{border-color:#b8a800;}
+  .corner-safe{border-color:#1a7a1a;}
+  .corner-idle{border-color:#333;}
+
+  .img-wrap{position:relative;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:24px;}
+  #target-img{max-width:100%;max-height:100%;object-fit:contain;display:block;opacity:0.9;}
+  #bbox-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  .img-label{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:10px;letter-spacing:2px;color:#444;padding:4px;background:linear-gradient(transparent,#0d0d0d);}
+  .scanning-line{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,180,255,0.4),transparent);animation:scan 3s linear infinite;opacity:0;}
+  @keyframes scan{0%{top:0;opacity:0.6;}100%{top:100%;opacity:0;}}
+  .scanning-line.active{opacity:1;}
+
+  /* ── 우측 패널 ── */
+  .right-panel{display:flex;flex-direction:column;gap:8px;}
+
+  /* 상태 + 바 */
+  .status-row{display:flex;align-items:flex-end;justify-content:space-between;background:#0f0f0f;border:1px solid #1a1a1a;padding:14px 16px 10px;}
+  .bars-area{display:flex;align-items:flex-end;gap:14px;}
+  .bar-item{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .bar-val{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;min-height:18px;}
+  .bar-track{width:22px;height:60px;background:#1a1a1a;border:1px solid #252525;position:relative;overflow:hidden;}
+  .bar-fill{position:absolute;bottom:0;left:0;right:0;transition:height 0.5s ease;border-radius:1px 1px 0 0;}
+  .bar-lbl{font-size:9px;color:#555;letter-spacing:1px;}
+  .bar-sep{color:#333;font-size:10px;align-self:flex-end;padding-bottom:12px;}
+  .bar-fighter .bar-fill{background:#cc2222;}
+  .bar-fighter .bar-val{color:#cc2222;}
+  .bar-drone   .bar-fill{background:#22aa22;}
+  .bar-drone   .bar-val{color:#22aa22;}
+  .bar-missile .bar-fill{background:#b8a800;}
+  .bar-missile .bar-val{color:#b8a800;}
+
+  /* 상태 원 */
+  .status-circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:10px;font-weight:900;letter-spacing:1px;text-align:center;transition:background 0.4s,box-shadow 0.4s;flex-shrink:0;}
+  .status-circle.DANGER {background:#cc2222;box-shadow:0 0 24px rgba(204,34,34,0.7);color:#fff;}
+  .status-circle.CAUTION{background:#b8a800;box-shadow:0 0 24px rgba(184,168,0,0.7);color:#000;}
+  .status-circle.SAFE   {background:#1a9922;box-shadow:0 0 24px rgba(26,153,34,0.7);color:#fff;}
+  .status-circle.IDLE   {background:#222;box-shadow:none;color:#555;}
+
+  /* 액션 버튼 */
+  .action-panel{background:#0f0f0f;border:1px solid #1a1a1a;padding:12px 16px;display:flex;flex-direction:column;gap:10px;}
+  .action-btn{width:100%;padding:16px;border:none;border-radius:6px;font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px;cursor:default;transition:all 0.4s;}
+  .action-btn.DANGER {background:#cc2222;color:#fff;box-shadow:0 0 20px rgba(204,34,34,0.5);}
+  .action-btn.CAUTION{background:#8b6914;color:#ffe066;box-shadow:0 0 20px rgba(184,168,0,0.4);}
+  .action-btn.SAFE   {background:#1a1a1a;color:#555;border:1px solid #333;}
+  .action-btn.IDLE   {background:#111;color:#333;border:1px solid #1e1e1e;}
+  /* ETC 노이즈 게이지 */
+  .etc-row{display:flex;align-items:center;gap:8px;}
+  .etc-label{font-size:9px;color:#555;letter-spacing:2px;white-space:nowrap;}
+  .etc-track{flex:1;height:8px;background:#1a1a1a;border:1px solid #252525;position:relative;overflow:hidden;border-radius:2px;}
+  .etc-fill{position:absolute;top:0;left:0;height:100%;transition:width 0.5s ease,background 0.4s;border-radius:2px;}
+  .etc-val{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;min-width:36px;text-align:right;}
+  .etc-msg{font-size:9px;letter-spacing:1px;text-align:center;}
+
+  /* 시스템 정보 */
+  .sys-info{background:#0f0f0f;border:1px solid #1a1a1a;padding:12px 16px;flex:1;}
+  .sys-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #141414;}
+  .sys-row:last-child{border-bottom:none;}
+  .sys-key{font-size:10px;color:#555;letter-spacing:1px;}
+  .sys-val{font-size:10px;color:#888;background:#161616;padding:2px 8px;border:1px solid #222;min-width:60px;text-align:center;}
+
+  /* ── 하단 패널 ── */
+  .tgt-data{background:#0f0f0f;border:1px solid #1a1a1a;padding:10px 14px;}
+  .tgt-row{display:flex;align-items:center;gap:8px;padding:3px 0;}
+  .tgt-key{font-size:10px;color:#555;width:70px;letter-spacing:1px;}
+  .tgt-val{font-size:10px;color:#888;background:#141414;border:1px solid #1e1e1e;padding:2px 10px;min-width:80px;}
+
+  /* +1H 버튼 */
+  .sim-btn{padding:10px 28px;background:transparent;border:1px solid #333;color:#888;font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:3px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+  .sim-btn:hover{border-color:#666;color:#ccc;background:#111;}
+  .sim-btn:active{transform:scale(0.97);}
+  .sim-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,0.03) 50%,transparent 60%);}
+  .sim-btn.loading{pointer-events:none;opacity:0.5;}
+
+  /* 로고 */
+  .logo-area{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .logo-svg{width:44px;height:44px;opacity:0.85;}
+  .logo-txt{font-family:'Orbitron',sans-serif;font-size:7px;letter-spacing:2px;color:#555;text-align:center;}
+
+  /* 로그 */
+  .log-area{flex:1;overflow:hidden;padding:0 10px;}
+  .log-line{font-size:9px;color:#333;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .log-line.new{color:#666;}
+
+  /* 스캔 애니메이션 */
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .blink{animation:pulse 1s ease-in-out infinite;}
+
+  /* 구분선 */
+  .divider{width:1px;background:#1a1a1a;align-self:stretch;}
+</style>
+</head>
+<body>
+<div class="hud">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="header-title">REASONING GUARD ▸ TACTICAL OPERATIONAL SYSTEM ▸ v3.0 [C++ ONNX ENGINE]</div>
+    <div class="header-time" id="clock">--:--:--</div>
+  </div>
+
+  <!-- 메인 콘텐츠 -->
+  <div class="content">
+
+    <!-- 이미지 패널 -->
+    <div class="img-panel" id="img-panel">
+      <div class="corner tl corner-idle" id="c-tl"></div>
+      <div class="corner tr corner-idle" id="c-tr"></div>
+      <div class="corner bl corner-idle" id="c-bl"></div>
+      <div class="corner br corner-idle" id="c-br"></div>
+      <div class="scanning-line" id="scan-line"></div>
+      <div class="img-wrap">
+        <img id="target-img" src="" alt="" style="display:none;">
+        <div id="placeholder" style="color:#222;font-size:11px;letter-spacing:3px;">AWAITING SIMULATION</div>
+        <canvas id="bbox-canvas"></canvas>
+      </div>
+      <div class="img-label" id="img-label">FEATURE EXTRACTION (ResNet-18) ▸ ONNX RUNTIME</div>
+    </div>
+
+    <!-- 우측 패널 -->
+    <div class="right-panel">
+
+      <!-- 바 차트 + 상태 원 -->
+      <div class="status-row">
+        <div class="bars-area">
+          <div class="bar-item bar-missile">
+            <div class="bar-val" id="val-missile">--</div>
+            <div class="bar-track"><div class="bar-fill" id="bar-missile" style="height:0%"></div></div>
+            <div class="bar-lbl">Missile</div>
+          </div>
+          <div class="bar-sep">|</div>
+          <div class="bar-item bar-fighter">
+            <div class="bar-val" id="val-fighter">--</div>
+            <div class="bar-track"><div class="bar-fill" id="bar-fighter" style="height:0%"></div></div>
+            <div class="bar-lbl">Jet</div>
+          </div>
+          <div class="bar-sep">|</div>
+          <div class="bar-item bar-drone">
+            <div class="bar-val" id="val-drone">--</div>
+            <div class="bar-track"><div class="bar-fill" id="bar-drone" style="height:0%"></div></div>
+            <div class="bar-lbl">Drone</div>
+          </div>
+        </div>
+        <div class="status-circle IDLE" id="status-circle">STAND<br>BY</div>
+      </div>
+
+      <!-- 액션 버튼 + ETC 게이지 -->
+      <div class="action-panel">
+        <button class="action-btn IDLE" id="action-btn">– – –</button>
+        <!-- ETC 노이즈 게이지: 50% 초과 시 자동 발사 억제 표시 -->
+        <div class="etc-row">
+          <span class="etc-label">ETC NOISE</span>
+          <div class="etc-track">
+            <div class="etc-fill" id="etc-fill" style="width:0%;background:#333;"></div>
+            <div style="position:absolute;top:0;left:50%;width:1px;height:100%;background:#444;"></div>
+          </div>
+          <span class="etc-val" id="etc-val" style="color:#555;">--</span>
+        </div>
+        <div class="etc-msg" id="etc-msg" style="color:#333;">– ETC SUPPRESSION STATUS –</div>
+      </div>
+
+      <!-- 시스템 정보 -->
+      <div class="sys-info">
+        <div class="sys-row">
+          <span class="sys-key">Current Ordnance</span>
+          <span class="sys-val" id="sys-ordnance">AIM-120</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">System Health</span>
+          <span class="sys-val" style="color:#22aa22;">NOMINAL</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Engage Mode</span>
+          <span class="sys-val" id="sys-engage">AUTO</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Auth Status</span>
+          <span class="sys-val" style="color:#22aa22;">GRANTED</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">Target ID</span>
+          <span class="sys-val" id="sys-targetid">--</span>
+        </div>
+        <div class="sys-row">
+          <span class="sys-key">ETC Noise</span>
+          <span class="sys-val" id="sys-etc">--</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 하단 -->
+  <div class="footer">
+    <div class="tgt-data">
+      <div class="tgt-row"><span class="tgt-key">TGT_POS</span><span class="tgt-val" id="tgt-pos">--</span></div>
+      <div class="tgt-row"><span class="tgt-key">AZI / ELEV</span><span class="tgt-val" id="tgt-azi">--</span></div>
+      <div class="tgt-row"><span class="tgt-key">TGT_VEL</span><span class="tgt-val" id="tgt-vel">--</span></div>
+      <div class="tgt-row"><span class="tgt-key">ETA</span><span class="tgt-val" id="tgt-eta">--</span></div>
+    </div>
+
+    <div class="log-area">
+      <div class="log-line" id="log1">▸ SYSTEM ONLINE</div>
+      <div class="log-line" id="log2">▸ ONNX ENGINE LOADED</div>
+      <div class="log-line" id="log3">▸ AWAITING SIMULATION</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+      <button class="sim-btn" id="sim-btn" onclick="runSimulation()">▶ +1 HOUR</button>
+      <div class="logo-area">
+        <svg class="logo-svg" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 5 L90 22 L90 55 Q90 85 50 105 Q10 85 10 55 L10 22 Z" fill="#111" stroke="#444" stroke-width="2"/>
+          <path d="M50 18 L78 30 L78 55 Q78 76 50 92 Q22 76 22 55 L22 30 Z" fill="#0a0a0a" stroke="#333" stroke-width="1"/>
+          <circle cx="50" cy="55" r="14" fill="none" stroke="#555" stroke-width="1.5"/>
+          <circle cx="50" cy="55" r="4" fill="#666"/>
+          <line x1="50" y1="30" x2="50" y2="41" stroke="#555" stroke-width="1.5"/>
+          <line x1="50" y1="69" x2="50" y2="80" stroke="#555" stroke-width="1.5"/>
+          <line x1="25" y1="55" x2="36" y2="55" stroke="#555" stroke-width="1.5"/>
+          <line x1="64" y1="55" x2="75" y2="55" stroke="#555" stroke-width="1.5"/>
+          <line x1="60" y1="45" x2="67" y2="38" stroke="#444" stroke-width="1"/>
+          <line x1="40" y1="45" x2="33" y2="38" stroke="#444" stroke-width="1"/>
+          <line x1="60" y1="65" x2="67" y2="72" stroke="#444" stroke-width="1"/>
+          <line x1="40" y1="65" x2="33" y2="72" stroke="#444" stroke-width="1"/>
+        </svg>
+        <div class="logo-txt">REASONING<br>GUARD</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── 시계 ──────────────────────────────────────────────────
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=
+    n.toTimeString().slice(0,8)+' LOCAL';
+}
+setInterval(updateClock,1000); updateClock();
+
+// ── 상태별 설정 ────────────────────────────────────────────
+const STATUS_CFG = {
+  DANGER:  {circle:'DANGER',  btn:'FIRED',   btnClass:'DANGER',  corner:'danger'},
+  CAUTION: {circle:'CAUTION', btn:'SHOOT',   btnClass:'CAUTION', corner:'caution'},
+  SAFE:    {circle:'SAFE',    btn:'HOLD',    btnClass:'SAFE',    corner:'safe'},
+  IDLE:    {circle:'IDLE',    btn:'– – –',  btnClass:'IDLE',    corner:'idle'},
+};
+
+// ── 랜덤 전술 데이터 생성 ───────────────────────────────────
+function randTgt(){
+  const lat=(35+Math.random()*10).toFixed(4);
+  const lon=(126+Math.random()*8).toFixed(4);
+  const azi=(Math.random()*360).toFixed(1);
+  const elev=(Math.random()*45).toFixed(1);
+  const vel=(180+Math.random()*820).toFixed(0);
+  const eta=(5+Math.random()*55).toFixed(0);
+  return {pos:`${lat}N ${lon}E`,azi:`${azi}° / ${elev}°`,vel:`${vel} kt`,eta:`${eta} sec`};
+}
+
+// ── 로그 추가 ──────────────────────────────────────────────
+let logHistory=[];
+function addLog(msg){
+  logHistory.unshift('▸ '+msg);
+  if(logHistory.length>3) logHistory=logHistory.slice(0,3);
+  ['log1','log2','log3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.textContent=logHistory[i]||'';
+    el.className='log-line'+(i===0?' new':'');
+  });
+}
+
+// ── UI 업데이트 ────────────────────────────────────────────
+function applyStatus(status){
+  const cfg=STATUS_CFG[status]||STATUS_CFG.IDLE;
+  const circle=document.getElementById('status-circle');
+  const btn=document.getElementById('action-btn');
+  circle.className='status-circle '+cfg.circle;
+  circle.innerHTML=cfg.circle==='IDLE'?'STAND<BR>BY':cfg.circle;
+  btn.className='action-btn '+cfg.btnClass;
+  btn.textContent=cfg.btn;
+  // 코너 색상
+  ['c-tl','c-tr','c-bl','c-br'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.className='corner '+id.split('-').slice(1).join(' ')+' corner-'+cfg.corner;
+  });
+}
+
+function updateBars(p){
+  ['missile','fighter','drone'].forEach(key=>{
+    const v=p[key]||0;
+    document.getElementById('val-'+key).textContent=Math.round(v)+'%';
+    document.getElementById('bar-'+key).style.height=Math.min(v,100)+'%';
+  });
+}
+
+// ── 바운딩 박스 그리기 ─────────────────────────────────────
+function drawBbox(img, status, predicted, confidence){
+  const canvas=document.getElementById('bbox-canvas');
+  const rect=img.getBoundingClientRect();
+  const wrap=img.parentElement.getBoundingClientRect();
+  canvas.width=wrap.width; canvas.height=wrap.height;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const colors={DANGER:'#cc2222',CAUTION:'#b8a800',SAFE:'#22aa22'};
+  const color=colors[status]||'#555';
+
+  // 이미지 실제 위치 계산
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  const cw=wrap.width, ch=wrap.height;
+  const scale=Math.min(cw/iw, ch/ih);
+  const sw=iw*scale, sh=ih*scale;
+  const ox=(cw-sw)/2, oy=(ch-sh)/2;
+
+  // bbox (이미지의 30~75% 영역을 랜덤하게)
+  const margin=0.12;
+  const bx=ox+sw*margin, by=oy+sh*margin;
+  const bw=sw*(1-margin*2), bh=sh*(1-margin*2);
+
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+  ctx.strokeRect(bx,by,bw,bh);
+
+  // 코너 강조
+  const cs=12;
+  ctx.lineWidth=3;
+  [[bx,by],[bx+bw,by],[bx,by+bh],[bx+bw,by+bh]].forEach(([x,y])=>{
+    ctx.beginPath();
+    ctx.moveTo(x+(x<bx+bw/2?0:-cs),y); ctx.lineTo(x+(x<bx+bw/2?cs:-cs*0),y);
+    ctx.moveTo(x,y+(y<by+bh/2?0:-cs)); ctx.lineTo(x,y+(y<by+bh/2?cs:0));
+    ctx.stroke();
+  });
+
+  // 라벨
+  const label=`${predicted}  (${confidence.toFixed(1)}%)`;
+  ctx.font='bold 13px "Share Tech Mono", monospace';
+  const tw=ctx.measureText(label).width;
+  ctx.fillStyle=color+'cc';
+  ctx.fillRect(bx,by-22,tw+16,20);
+  ctx.fillStyle='#fff';
+  ctx.fillText(label, bx+8, by-7);
+}
+
+// ── 메인 시뮬레이션 ───────────────────────────────────────
+async function runSimulation(){
+  const btn=document.getElementById('sim-btn');
+  btn.classList.add('loading');
+  btn.textContent='PROCESSING...';
+
+  // 스캔 라인 활성화
+  const scanLine=document.getElementById('scan-line');
+  scanLine.classList.add('active');
+
+  try{
+    const res=await fetch('/api/simulate');
+    const d=await res.json();
+
+    // 이미지 로드
+    const img=document.getElementById('target-img');
+    const placeholder=document.getElementById('placeholder');
+    img.style.display='none';
+    await new Promise(resolve=>{
+      img.onload=resolve;
+      img.src='/api/image/'+d.target+'?t='+Date.now();
+    });
+    img.style.display='block';
+    placeholder.style.display='none';
+
+    // 바운딩 박스
+    const maxConf=Math.max(d.probs.fighter,d.probs.drone,d.probs.missile);
+    setTimeout(()=>drawBbox(img,d.status,d.predicted,maxConf),100);
+
+    // UI 업데이트
+    updateBars(d.probs);
+    applyStatus(d.status);
+
+    // 시스템 정보
+    document.getElementById('sys-targetid').textContent=d.predicted;
+    document.getElementById('sys-etc').textContent=d.probs.etc.toFixed(1)+'%';
+    const tgt=randTgt();
+    document.getElementById('tgt-pos').textContent=tgt.pos;
+    document.getElementById('tgt-azi').textContent=tgt.azi;
+    document.getElementById('tgt-vel').textContent=tgt.vel;
+    document.getElementById('tgt-eta').textContent=tgt.eta;
+
+    // ETC 노이즈 게이지 업데이트
+    const etcVal = d.probs.etc;
+    const etcFill = document.getElementById('etc-fill');
+    const etcValEl = document.getElementById('etc-val');
+    const etcMsg = document.getElementById('etc-msg');
+    etcFill.style.width = Math.min(etcVal, 100) + '%';
+    etcValEl.textContent = etcVal.toFixed(1) + '%';
+    if (etcVal > 50) {
+      // ETC > 50% → 자동 발사 억제
+      etcFill.style.background = '#cc2222';
+      etcValEl.style.color = '#cc2222';
+      etcMsg.textContent = '⚠ FIRE SUPPRESSED — NOISE EXCEEDS 50%';
+      etcMsg.style.color = '#cc4444';
+    } else {
+      // ETC ≤ 50% → 발사 조건 충족 가능
+      etcFill.style.background = '#22aa22';
+      etcValEl.style.color = '#22aa22';
+      etcMsg.textContent = '✓ NOISE NOMINAL — FIRE CONDITION MET';
+      etcMsg.style.color = '#22aa22';
+    }
+
+    // 로그
+    const actions={DANGER:'FIRE AUTH GRANTED',CAUTION:'MANUAL OVERRIDE REQUIRED',SAFE:'TARGET TRACKING — HOLD'};
+    addLog(`[TGT] ${d.target} → ${d.predicted} → ${d.status}`);
+    addLog(actions[d.status]||'STANDBY');
+
+  }catch(e){
+    addLog('[ERROR] SIMULATION FAILED: '+e.message);
+  }finally{
+    btn.classList.remove('loading');
+    btn.textContent='▶ +1 HOUR';
+    scanLine.classList.remove('active');
+  }
+}
+
+// 윈도우 리사이즈 시 캔버스 재그리기
+window.addEventListener('resize',()=>{
+  const img=document.getElementById('target-img');
+  if(img.src&&img.style.display!=='none'){
+    const s=document.getElementById('status-circle').className.split(' ')[1];
+    const id=document.getElementById('sys-targetid').textContent;
+    const etc=parseFloat(document.getElementById('sys-etc').textContent)||0;
+    const maxC=Math.max(
+      parseFloat(document.getElementById('val-fighter').textContent)||0,
+      parseFloat(document.getElementById('val-drone').textContent)||0,
+      parseFloat(document.getElementById('val-missile').textContent)||0
+    );
+    drawBbox(img,s,id,maxC);
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Visual Studio & CMake
+.vs/
+out/
+build/
+CMakeCache.txt
+CMakeFiles/
+*.cmake
+*.dir/
+
+# SDK & Libraries
+sdk/
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
+
+# Python
+__pycache__/
+*.pyc
+
+# AI Model Files (용량이 클 경우 깃허브 오류 방지, 원하시면 주석 해제하세요)
+# *.onnx
+# *.onnx.data
+
+# OS generated files
+.DS_Store
+Thumbs.db
