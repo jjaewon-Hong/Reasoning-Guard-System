@@ -7,7 +7,7 @@
 
 
 
-!\[Reasoning Guard Logo](./Logo.png)
+!\[Reasoning Guard Logo](./docs/Logo.png)
 
 
 
