@@ -9,7 +9,7 @@
 * **Course:** OSS설계 최종
 
 ## 🛡️ Project Overview
-**Reasoning-Guard-System**은 `Reasoning-Guard` 기반으로 프론트엔드 UI와 백엔드(C++ 전술 엔진 및 AI 모델)가 완전히 결합된 **웹 기반 통합 시뮬레이션 환경**과, 실제 방공 하드웨어 탑재 및 검증을 목적으로 하는 **C++ 네이티브 코어 환경** 두 가지 형태로 구축되었습니다.
+**Reasoning-Guard-System**은 [`Reasoning-Guard`](https://github.com/jjaewon-Hong/Reasoning-Guard) 기반으로 프론트엔드 UI와 백엔드(C++ 전술 엔진 및 AI 모델)가 완전히 결합된 **웹 기반 통합 시뮬레이션 환경**과, 실제 방공 하드웨어 탑재 및 검증을 목적으로 하는 **C++ 네이티브 코어 환경** 두 가지 형태로 구축되었습니다.
 
 <br>
 
