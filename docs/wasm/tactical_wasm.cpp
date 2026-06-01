@@ -1,22 +1,29 @@
-// ============================================================
-//  tactical_wasm.cpp — Reasoning Guard WebAssembly Module
-//  C++ → WASM via Emscripten
+// ================================================================
+//  tactical_wasm.cpp — Reasoning Guard WebAssembly (WASM) 헬퍼 모듈
 //
-//  기능:
-//   1) preprocess()  : RGBA 픽셀 → CHW [1,3,224,224] float 텐서
-//                      (Zero-Padding + Bilinear Resize + ImageNet Normalize)
-//   2) evaluate()    : sigmoid 확률값 → 전술 판정 (DANGER/CAUTION/SAFE)
+//  [핵심 역할]
+//  HTML 내부의 자바스크립트가 ONNX를 빠르고 쉽게 돌릴 수 있도록 
+//  데이터를 '준비'해주고 결과를 C++의 매우 빠른 속도로 '해석'해주는 헬퍼 역할을 함
 //
-//  이 모듈은 브라우저에서 onnxruntime-web과 함께 동작하여
-//  GitHub Pages 정적 호스팅 환경에서도 실제 ONNX 추론을 수행한다.
-// ============================================================
+//  [제공하는 함수]
+//   1) preprocess() (전처리) : 
+//      웹 화면의 이미지를 AI가 알아먹기 좋게 다듬어서 숫자 배열로 만듦
+//      (정사각형 맞추기 + 224x224 리사이즈 + 소수점 정규화)
+//
+//   2) evaluate_threat() (후처리/전술 판정) : 
+//      AI가 예측한 확률값(%)들을 보고, 당장 쏴야 하는지(DANGER) 
+//      아니면 대기할지(SAFE) 최종 전술 판정을 내려줍니다.
+//
+//  [동작 원리]
+//  HTML(JavaScript)이 위의 두 함수를 가져다 쓰면서 ONNX 모델과 
+//  완벽하게 연동(통합)시켜, 웹 브라우저 위에서 실시간 광속 추론을 수행
+// ================================================================
 
 #include <emscripten/emscripten.h>
 #include <cmath>
 #include <cstring>
 #include <algorithm>
 
-// ── 상수 정의 ─────────────────────────────────────────────────
 static constexpr int TARGET_H = 224;
 static constexpr int TARGET_W = 224;
 static constexpr int CHANNELS = 3;
@@ -29,7 +36,7 @@ static constexpr float STD[3]  = {0.229f, 0.224f, 0.225f};
 // 전술 판정용 클래스명
 static const char* CLASS_NAMES[4] = {"FIGHTER", "DRONE", "MISSILE", "ETC"};
 
-// ── 내부 버퍼 ─────────────────────────────────────────────────
+// 내부 버퍼 
 static float g_tensor[TENSOR_SIZE];  // 전처리된 CHW 텐서
 
 // 전술 판정 결과 버퍼
@@ -105,7 +112,7 @@ extern "C" {
 
 EMSCRIPTEN_KEEPALIVE
 float* preprocess(const unsigned char* rgba_data, int width, int height) {
-    // 1) RGBA → RGB 추출
+    // 1) HTML은 RGBA 사용하지만 파이토치 모델은 RGB만 사용하므로 A는 무시한 RGB 추출
     int pixel_count = width * height;
     unsigned char* rgb = new unsigned char[pixel_count * 3];
     for (int i = 0; i < pixel_count; ++i) {
@@ -132,7 +139,7 @@ float* preprocess(const unsigned char* rgba_data, int width, int height) {
     }
     delete[] rgb;
 
-    // 3) Bilinear Resize → 224×224
+    // 3) Bilinear Resize -> 224×224
     unsigned char* resized = new unsigned char[TARGET_H * TARGET_W * 3];
     bilinear_resize(padded, max_dim, max_dim, resized, TARGET_W, TARGET_H, 3);
     delete[] padded;
@@ -179,11 +186,11 @@ TacticalResultWasm* evaluate_threat(const float* probs) {
     float etc     = probs[3];
 
     // 최고 확률 클래스 인덱스
-    int pred_idx = 0;
+    int pred_idx = 0; // 임시로 전투기 확률이 가장 높다고 가정함
     float max_val = fighter;
-    if (drone   > max_val) { max_val = drone;   pred_idx = 1; }
-    if (missile > max_val) { max_val = missile;  pred_idx = 2; }
-    if (etc     > max_val) { max_val = etc;      pred_idx = 3; }
+    if (drone   > max_val) { max_val = drone;   pred_idx = 1; } // 드론이 더 높다고 판단
+    if (missile > max_val) { max_val = missile;  pred_idx = 2; } // 미사일이 더 높다고 판단
+    if (etc     > max_val) { max_val = etc;      pred_idx = 3; } // 노이즈일 확률이 높다고 판단
 
     // 전술 타격 대상 최대 확률
     float tactical_max = std::max({fighter, drone, missile});
@@ -207,9 +214,7 @@ TacticalResultWasm* evaluate_threat(const float* probs) {
     return &g_result;
 }
 
-// ============================================================
-//  get_class_name() — 클래스 인덱스 → 문자열 반환
-// ============================================================
+//  get_class_name() : 클래스 인덱스 -> 문자열 반환
 EMSCRIPTEN_KEEPALIVE
 const char* get_class_name(int idx) {
     if (idx >= 0 && idx < 4) return CLASS_NAMES[idx];
