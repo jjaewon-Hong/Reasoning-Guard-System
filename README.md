@@ -9,10 +9,16 @@
 * **Course:** OSS설계 최종
 
 ## 🛡️ Project Overview
-**Reasoning-Guard-System**은 `Reasoning-Guard`에서 진행된 PyTorch 기반의 모델 학습과 체계적인 시스템 설계(개념화·분석·디자인)를 바탕으로, 실제 전술 환경에서의 운용까지 C++로 구현해 낸 최종 통합 시스템입니다. 학습 완료된 모델을 ONNX로 추출 및 최적화하여 C++ 전술 엔진에 이식한 고신뢰성 지능형 방공 솔루션으로서, 3단계 전술 로직으로 의사결정을 자동화합니다. 또한 연구용 Public Dataset을 활용하여 보안 무결성을 견지함과 동시에, 전술 데이터의 집약적 관리와 확장성을 극대화한 실전형 사격 통제 아키텍처를 완성했습니다.
+**Reasoning-Guard-System**은 `Reasoning-Guard` 기반으로 프론트엔드 UI와 백엔드(C++ 전술 엔진 및 AI 모델)가 완전히 결합된 **웹 기반 통합 시뮬레이션 환경**과, 실제 방공 하드웨어 탑재 및 검증을 목적으로 하는 **C++ 네이티브 코어 환경** 두 가지 형태로 구축되었습니다.
 
-## 🛠️ Technology Stack
-* **AI & Inference:** PyTorch, ONNX, ONNX Runtime (C++ / Web)
-* **Backend:** C++ (Tactical Engine), Python (Model Export & Test API)
-* **Frontend:** HTML5, CSS3, Vanilla JavaScript (Browser Inference)
-* **Build & Deploy:** CMake, GitHub Pages
+### 🌐 Web Visualization (Frontend / Backend Integrated Demo)
+웹 브라우저 상에서 실제 방공 시스템의 동작을 시각적으로 확인할 수 있는 메인 시뮬레이션 환경입니다. UI/UX를 담당하는 프론트엔드와 표적을 판별하는 백엔드(ONNX AI 모델 및 C++ 전술 엔진)가 WebAssembly(WASM)를 통해 매끄럽게 상호작용합니다. 실제 방공 장비의 카메라나 레이더에 새로운 표적이 포착되는 상황을 `+1 Hour (시뮬레이션 진행)` 버튼으로 구현하였으며, 버튼 클릭 시 백엔드 모델이 즉각적으로 표적을 분석하고 그 결과를 프론트엔드로 반환하여 화면에 렌더링합니다.
+* **`docs/index.html`**: 사용자의 조작(`+1 Hour` 버튼)을 입력받아 백엔드로 전달하고, 분석된 전술 결과를 화면에 띄워주는 프론트엔드 메인 인터페이스
+* **`docs/wasm/tactical_wasm.cpp`**: C++로 작성된 백엔드 전술 코어를 웹 환경과 연결해주는 핵심 브릿지 모듈
+* **`reasoning_guard_engine.onnx`**: 전달받은 표적의 종류와 위협 확률을 정확히 판별해 내는 백엔드의 핵심 두뇌(AI 모델)
+
+### ⚙️ Tactical Core Engine (Embedded / Hardware Target)
+실제 임베디드 장비나 하드웨어 기반의 방공 시스템에 직접 적용 및 이식하기 쉬운 형태로 구현된 C++ 코어 모듈입니다. 현재는 로컬 환경에서의 테스트용으로 구성되어 있습니다.
+* **`main.cpp`**: C++ 전술 엔진 및 모델 추론 독립 테스트를 위한 엔트리 포인트
+* **`preprocess.h`**: 레이더 등에서 수집된 센서 데이터를 AI 모델의 입력 텐서 형태로 변환하는 전처리 모듈
+* **`tactical_engine.cpp`**: 표적의 위협 수준을 판별하고 최적의 교전 시나리오를 결정하는 핵심 전술 로직
