@@ -840,7 +840,7 @@
       ['missile', 'fighter', 'drone'].forEach(key => {
         const v = p[key] || 0;
         document.getElementById('val-' + key).textContent = Math.round(v) + '%';
-        document.getElementById('bar-' + key).style.height = Math.min(v, 100) + '%';
+        document.getElementById('bar-' + key).style.height = Math.min(Math.round(v), 100) + '%';
       });
     }
 
